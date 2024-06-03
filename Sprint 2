@@ -1,0 +1,120 @@
+Sprint 2 - Secure Key Management with AWS KMS
+
+AWS KMS key:It refers to a cryptographic key managed by the AWS Key Management Service (AWS KMS). AWS KMS is a service offered by Amazon Web Services that helps you create and control the keys used to encrypt your data stored in AWS.  AWS KMS uses secure hardware modules to protect these keys and integrates with many other AWS services for data encryption.
+
+Symmetric Keys:
+  - Imagine a padlock with a single key. This key both locks and unlocks the padlock.
+  - In symmetric encryption, a single secret key is used for both encryption and decryption.
+
+Asymmetric Keys:
+
+  - Imagine a mailbox with two special slots: a large public slot for putting in letters and a private slot with a key for retrieving them.
+  - In asymmetric encryption, a pair of mathematically linked keys are used:
+  - Public Key: This key is widely distributed and can be shared with anyone. It's used for encryption.
+  - Private Key: This key is kept secret and used for decryption.
+
+
+KMS Key Lifecycle Management refers to the practices and processes involved in securely managing cryptographic keys throughout their entire lifespan within a Key Management Service (KMS). This lifecycle typically involves several stages:
+
+  1. Key Generation: This involves creating a new cryptographic key using the KMS.  The KMS ensures the key is generated securely with sufficient randomness to resist cracking.
+
+  2. Key Activation:  The newly generated key may need to be activated before it can be used for encryption or decryption operations. This might involve some configuration or authorization steps within the KMS.
+
+  3. Key Usage:  The key is used to encrypt and decrypt data or perform other cryptographic operations as authorized by the KMS policies.
+
+  4. Key Rotation:  Over time, keys can become compromised or reach the end of their designated lifespan.  KMS key rotation involves creating a new key and migrating data encryption to the new key while securely decommissioning the old one.  This helps maintain the overall security of the encrypted data.
+
+  5. Key Deactivation/Deletion: When a key is no longer needed, it's important to securely deactivate and delete it from the KMS. This prevents unauthorized access or use of the key in the future.
+
+AWS IAM stands for Identity and Access Management. It's a core security service offered by Amazon Web Services (AWS) that lets you control who or what can access AWS resources.  Here's a breakdown of its key functionalities:
+
+  - Identity Management:  IAM allows you to create and manage different identities that can interact with AWS resources. These identities can be users (individual people with AWS accounts), groups (collections of users), or roles (sets of permissions that can be assigned to users or services).
+
+  - Access Control:  IAM provides fine-grained access control to AWS resources. You can define permissions that specify exactly what actions each identity can perform on specific AWS services or resources.  This ensures that users only have the minimum access required to perform their jobs, following the principle of least privilege.
+
+  - Security Policies:  IAM lets you create policies that define permissions in a structured format. These policies can be attached to users, groups, or roles to control their access to AWS resources. IAM supports various policy types to allow for granular control.
+
+  - Monitoring and Auditing:  IAM offers functionalities to track and monitor how users and other identities are accessing AWS resources. This helps identify suspicious activity and potential security risks.
+
+Project Documentation
+
+KMS Key Creation for Low Sensitivity 
+  - Log into user (Project) and navigate to KMS Services 
+  - Go to Customer managed keys and click on Create key
+  - Key type Symmetric, Key usage Encrypt and decrypt click next
+  - Name Health_Low-Sensitivity, click next
+  - Click next
+  - Click next
+  - Click finish
+
+KMS Key Creation for High Sensitivity 
+  - Click create key 
+  - Key type Asymmetric, key usage Encrypt and decrypt, Key spec RSA_2048 click next
+  - Name Health_High_Sentivity, click next 
+  - Click next
+  - Click next
+  - Click finish
+
+KMS Key lifecycle Management for Low Sensitivity
+  - Click on key name
+  - Go to Key rotation
+  - Edit Automatic key rotation (Click Enable and set Rotation period to 90 days) click save 
+
+
+
+
+IAM Users 
+  - Navigate to IAM in the dashboard
+  - Under users click create user 
+  - Name Doctor and click create user 
+  - Repeat steps but name next user Receptionist
+
+IAM Policies
+Create IAM Policy for Doctor (High Sensitivity):
+
+  - Navigate to the IAM service.
+  - Create Policy: Click on "Policies" in the left sidebar, then click the "Create policy" button.
+  - Choose Policy Editor: Select the "Visual editor" option to create the policy document graphically.
+  - Search for Service: In the search bar, type "KMS" and select "Amazon KMS" from the list.
+  - Allow Actions: Under "KMS actions," check the following boxes:
+    - CreateKey
+    - DescribeKey
+    - GenerateDataKey
+    - Encrypt
+    - Decrypt
+    - RotateKey
+    - ScheduleKeyDeletion
+    - CancelKeyDeletion
+  - Add Principal: Click on "Add users" under "Conditions" and select the "Doctor" user from the list.
+  - Review and Name: Review the policy document summary and provide a descriptive name (DoctorKMSHighSensitivity). Click "Create policy."
+
+Create IAM Policy for Receptionist (Low Sensitivity):
+
+  - Repeat steps but with the following adjustments:
+  - Under "KMS actions," only check the following boxes:
+    - Encrypt
+    - Decrypt
+  - In the "Resources" section, enter the ARN of the specific KMS key the Receptionist should be able to use (for low-sensitivity data). You can find the ARN by navigating to KMS and selecting the key in the console.
+  - Name the policy ReceptionistKMSLowSensitivity .
+  - Attach Policies to Users:
+
+  - Navigate to Users: In the IAM console, navigate to "Users" in the left sidebar.
+  - Attach Policy to Doctor: Select the "Doctor" user from the list. Click on "Attach policies."
+  - Choose Doctor Policy: Under "Available policies," select the "DoctorKMSHighSensitivity" policy and click "Attach."
+  - Attach Policy to Receptionist: Repeat the process for the "Receptionist" user, attaching the ReceptionistKMSLowSensitivity policy.
+
+KMS Integration with Encryption
+  - Navigate to DynamoDB in the dashboard, click Create Table
+  - Table Name PatientRecords, Partition Key PatientID
+  - Click Create table
+  - Go to Additional settings, scroll down to Encryption, click Manage encryption
+  - Click Stored in your account, and owned and managed by you, select the Health_Low-Sensitivity key.
+
+S3 Bucket
+  - Navigate to S3 in Dashboard, click Create Bucket
+  - Bucket Type General Purpose
+  - Bucket Name lowsensitivity
+  - Encryption type Server-side with KMS, Choose from your own keys
+  - Select Low Sensitivity key
+  - Click create bucket
+
