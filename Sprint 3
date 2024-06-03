@@ -1,0 +1,135 @@
+Sprint 3: Enhanced Security with AWS CloudHSM
+
+Create VPC
+  - Navigate to VPC in AWS Dashboard, click Create VPC
+  - Select VPC and more
+  - Name HSM-vpc
+  - Choose 10.0.0.0/16 
+  - Choose 2 Availability Zones 
+  - Choose 2 public subnets
+  - Choose 2 private subnets
+  - Click Create VPC
+
+Create EC2
+  - Navigate to EC2 in AWS Dashboard, Click Create EC2
+  - Name HSM
+  - OS Amazon Linux 2023
+  - Instance type t2.micro
+  - Create new keypair (HSMKey)
+  - Select VPC we created (HSM-vpc)
+  - Pick 1st public subnet 
+  - Create security group, Name HSM
+  - After EC2 is created go to Actions, Security, Change security groups, and select Cluster security group, click save.
+  - Launch instance 
+
+Create Cluster 
+  - Navigate to CloudHSM in AWS Dashboard, click Create cluster 
+  - Select VPC that we created (HSM-vpc)
+  - Choose 2 Availability Zones for subnets (us-east-1a and us-east-1b)
+  - Create a new cluster, Click Next
+  - Backup retention 90 days, Click Next
+  - Add Tag HealthHSM
+  - Click Create cluster 
+
+Key Concepts in CloudHSM
+1. Secure Partition Initialization:
+
+  - A CloudHSM cluster is divided into logical security domains called partitions. Each partition operates independently and requires secure initialization.
+  - During initialization, a special master key is created and used to encrypt all other keys stored within the partition. This master key is never revealed and strengthens overall key security.
+  - Secure partition initialization involves a cryptographic ceremony using a Hardware Security Module (HSM) appliance or a dedicated tool.
+  - This ceremony ensures the master key is generated in a tamper-proof environment and distributed securely to authorized personnel (cryptographic officers).
+2. Cryptographic Officers:
+
+  - Cryptographic officers (COs) are special HSM users with elevated privileges for critical tasks like partition initialization, master key management, and user role assignment within a partition.
+  - Their access is strictly controlled to minimize the risk of unauthorized key access or manipulation.
+  - COs can be implemented using separate HSM login credentials or dedicated physical tokens for enhanced security.
+3. Quorum Authentication:
+
+  - For critical operations within a CloudHSM cluster (e.g., master key rotation), quorum authentication ensures additional security by requiring approval from multiple authorized users (cryptographic officers) before proceeding.
+  - This multi-factor approach helps prevent unauthorized changes or accidental actions that could compromise the security of the CloudHSM cluster and its keys.
+
+Best Practices for Securing CloudHSM
+
+  - Minimize Network Access: Restrict inbound traffic to the CloudHSM instances only from authorized sources (e.g., your application servers) using specific ports (e.g., 443 for TLS).
+  - Strong IAM Policies: Implement granular IAM policies that grant users only the minimum permissions required for their specific tasks within CloudHSM partitions.
+  - Regular Security Audits: Conduct regular penetration testing and security audits of your CloudHSM deployment to identify and address potential vulnerabilities.
+  - Keep Software Updated: Maintain the latest software versions for the CloudHSM client tools and firmware on the HSM instances for improved security and bug fixes.
+  - Monitor and Log Activity: Implement CloudTrail and CloudWatch to monitor API calls to CloudHSM and log user activity for audit purposes.
+
+Creating a Custom Key Store:
+
+  - Log in to the AWS Management Console and navigate to the KMS service.
+  - In the KMS console, click on "Custom key stores" in the navigation pane.
+  - Click on "Create custom key store."
+  - Provide a name for your custom key store.
+  - Choose the CloudHSM cluster ID you want to link this key store to.
+  - Select the partition within the chosen CloudHSM cluster where KMS will manage keys.
+  - Review the details and click "Create."
+
+Generating and Managing CMKs:
+
+  - Now that you have a custom key store linked to CloudHSM, you can create and manage CMKs within it.
+  - In the KMS console, navigate to the "Customer master keys" section.
+  - Click on "Create key."
+  - Choose "Customer managed" as the key origin (since CloudHSM will manage the key material).
+  - Select your newly created custom key store from the dropdown menu.
+  - Optionally, configure additional settings like key type (e.g., symmetric or asymmetric) and key spec (e.g., algorithm and key size).
+  - Click "Create" to generate the CMK within the CloudHSM cluster.
+  - You can use the KMS console or API to manage these CMKs (e.g., enable/disable, schedule rotation) but the actual key material resides securely within the CloudHSM cluster.
+
+Benefits of CloudHSM for Master Key Storage and Cryptography
+  - CloudHSM offers several advantages over traditional software-based solutions for managing encryption keys and performing cryptographic operations. Here's a breakdown of the key benefits:
+
+1. Enhanced Security:
+
+  - Hardware Isolation: CloudHSM stores cryptographic keys and performs operations within dedicated hardware modules, isolated from the software environment. This physical separation significantly reduces the risk of software vulnerabilities or malware attacks compromising your keys.
+  - Tamper Detection: CloudHSM modules are designed to detect tampering attempts and destroy key material if unauthorized access is suspected. This additional layer of security safeguards your keys against physical breaches.
+  - Secure Key Lifecycle Management: CloudHSM provides features like secure partition initialization, cryptographic officer roles, and quorum authentication for critical operations. These measures ensure the secure creation, storage, and rotation of master keys throughout their lifecycle.
+
+2. Regulatory Compliance:
+
+  - Industry Standards: CloudHSM complies with various industry standards and regulations related to data security and key management, such as PCI DSS, HIPAA, and FIPS 140-2. This compliance can be critical for organizations in specific sectors with strict data security requirements.
+  - Auditability: CloudHSM integrates with tools like CloudTrail and CloudWatch, allowing you to monitor key usage and access logs for audit purposes. This comprehensive audit trail helps demonstrate adherence to security best practices and regulatory requirements.
+
+3. Performance Improvements:
+
+  - Hardware Acceleration: CloudHSM utilizes dedicated hardware for cryptographic operations, offloading the workload from your application servers. This can lead to significant performance gains, especially for computationally intensive tasks like encryption and decryption.
+  - Scalability: CloudHSM supports scaling your HSM cluster by adding more instances. This ensures your cryptographic operations can handle increased workloads without compromising performance.
+
+Key Considerations for KMS and CloudHSM Integration
+While KMS with CloudHSM offers a powerful solution for secure key management, there are some crucial factors to consider during integration:
+
+1. Availability:
+
+  - High Availability (HA): Ensure both KMS and your CloudHSM cluster are configured for high availability. KMS itself is highly available, but any outage in the CloudHSM cluster will impact access to CMKs stored within it.
+  - Redundancy: Deploying multiple HSM instances within your cluster and leveraging different Availability Zones in your VPC can enhance redundancy in case of HSM instance failure. KMS can automatically route requests to healthy HSM instances.
+2. Durability:
+
+  - CloudHSM Backups: Regularly back up your CloudHSM partitions to an S3 bucket for disaster recovery. This ensures you can restore your keys in case of hardware failures or accidental deletion.
+  - KMS Key Rotation: Implement KMS key rotation policies to regularly rotate your CMKs. This mitigates the risk associated with a compromised key and ensures the long-term security of your data.
+3. Performance:
+
+  - Network Latency: Consider the network latency between your application servers and the CloudHSM cluster. Increased latency can impact the performance of cryptographic operations.
+  - KMS Caching: KMS offers caching mechanisms that can improve performance by storing recently used keys locally. Explore these options to optimize KMS interaction with CloudHSM.
+
+Best Practices for Monitoring and Auditing
+1. CloudTrail and CloudWatch Integration:
+  - Enable CloudTrail integration for KMS to log all API calls made to the service, including key management operations.
+  - Use CloudWatch to analyze these logs and monitor key usage patterns for potential anomalies or suspicious activity.
+
+2. CloudHSM Monitoring:
+  - Utilize the CloudHSM client tools or AWS CloudWatch metrics to monitor the health and performance of your CloudHSM cluster.
+  - Track metrics like HSM instance status, partition availability, and cryptographic operation latency to identify potential issues.
+
+3. User Activity Monitoring:
+  - Implement IAM policies with least privilege principles to restrict user access to specific KMS actions and CloudHSM partitions based on their roles.
+  - Monitor IAM activity logs to track user access attempts and identify any unauthorized or unusual activity related to KMS key usage.
+
+4. Regular Security Audits:
+  - Conduct regular penetration testing and security audits of your KMS and CloudHSM deployment to identify and address potential vulnerabilities in your configuration or access controls.
+
+Topology 
+
+https://drive.google.com/file/d/1aY1zLwerMB8yBMT-RstNWY0Up2hYgdP_/view
+
+
